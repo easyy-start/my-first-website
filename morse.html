@@ -125,11 +125,11 @@
 
             for (let char of text) {
                 if (char === '・') {
-                    await playTone(audioCtx, 600, unitTime); // 短音（トン）
+                    await playTone(audioCtx, 600, unitTime * 1.5); // 短音（トン）
                 } else if (char === '－') {
-                    await playTone(audioCtx, 600, unitTime * 3); // 長音（ツー）
+                    await playTone(audioCtx, 600, unitTime * 4); // 長音（ツー）
                 } else {
-                    await sleep(unitTime * 5); // スペースの間の無音
+                    await sleep(unitTime * 10); // スペースの間の無音
                 }
                 await sleep(unitTime); // 音同士のスキマ
             }
