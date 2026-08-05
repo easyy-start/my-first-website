@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>モールス信号 変換＆学習ツール | Web Service Lab</title>
+    <meta name="description" content="アルファベットをモールス信号にリアルタイム変換し、音で聴いて学べるWebツールです。">
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #2b3a4a;
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        main {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 1.1rem;
+            box-sizing: border-box;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+        .result-box {
+            background: #1e1e1e;
+            color: #00ff66;
+            font-family: monospace;
+            font-size: 1.8rem;
+            padding: 15px;
+            border-radius: 6px;
+            word-break: break-all;
+            margin: 15px 0;
+            min-height: 50px;
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 10px;
+            color: #2b3a4a;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>📻 モールス信号 変換＆学習</h1>
+    </header>
+    <main>
+        <div class="card">
+            <label for="inputText"><strong>英数字を入力（半角）：</strong></label>
+            <input type="text" id="inputText" placeholder="例: SOS または HELLO" oninput="convert()">
+
+            <h3>変換結果：</h3>
+            <div class="result-box" id="morseOutput">・・・ －－－ ・・・</div>
+
+            <button onclick="playMorse()">🔊 音を鳴らす（再生）</button>
+        </div>
+
+        <a href="index.html" class="back-link">← トップページに戻る</a>
+    </main>
+
+    <script>
+        // モールス信号の辞書データ（JavaScriptの連想配列）
+        const morseCode = {
+            'A': '・－',    'B': '－・・・', 'C': '－・－・', 'D': '－・・',  'E': '・',
+            'F': '・・－・', 'G': '－－・',  'H': '・・・・', 'I': '・・',    'J': '・－－－',
+            'K': '－・－',  'L': '・－・・', 'M': '－－',    'N': '－・',    'O': '－－－',
+            'P': '・－－・', 'Q': '－－・－', 'R': '・－・',  'S': '・・・・', 'T': '－',
+            'U': '・・－',  'V': '・・・－', 'W': '・－－',  'X': '－・・－', 'Y': '－・－－',
+            'Z': '－－・・', '1': '・－－－－', '2': '・・－－－', '3': '・・・－－',
+            '4': '・・・・－', '5': '・・・・・', '6': '－・・・・', '7': '－－・・・',
+            '8': '－－－・・', '9': '－－－－・', '0': '－－－－－', ' ': ' / '
+        };
+
+        // 入力された文字をモールス信号にリアルタイム変換
+        function convert() {
+            const input = document.getElementById('inputText').value.toUpperCase();
+            let output = '';
+            for (let char of input) {
+                if (morseCode[char]) {
+                    output += morseCode[char] + ' ';
+                } else {
+                    output += char + ' ';
+                }
+            }
+            document.getElementById('morseOutput').innerText = output || '（ここに表示されます）';
+        }
+
+        // Web Audio APIを使ってブラウザだけで「ピ・ポー」と音を鳴らす処理
+        async function playMorse() {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const text = document.getElementById('morseOutput').innerText;
+            
+            const unitTime = 0.08; // 1音の長さ（秒）
+
+            for (let char of text) {
+                if (char === '・') {
+                    await playTone(audioCtx, 600, unitTime); // 短音（トン）
+                } else if (char === '－') {
+                    await playTone(audioCtx, 600, unitTime * 3); // 長音（ツー）
+                } else {
+                    await sleep(unitTime * 2); // スペースの間の無音
+                }
+                await sleep(unitTime); // 音同士のスキマ
+            }
+        }
+
+        function playTone(ctx, freq, duration) {
+            return new Promise(resolve => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.frequency.value = freq;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                setTimeout(() => {
+                    osc.stop();
+                    resolve();
+                }, duration * 1000);
+            });
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // 初期表示
+        convert();
+    </script>
+</body>
+</html>
