@@ -122,7 +122,7 @@
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             const text = document.getElementById('morseOutput').innerText;
             
-            const unitTime = 0.08; // 1音の長さ（秒）
+            const unitTime = 0.10; // 1音の長さ（秒）
 
             for (let char of text) {
                 if (char === '・') {
@@ -130,7 +130,7 @@
                 } else if (char === '－') {
                     await playTone(audioCtx, 600, unitTime * 3); // 長音（ツー）
                 } else {
-                    await sleep(unitTime * 2); // スペースの間の無音
+                    await sleep(unitTime * 5); // スペースの間の無音
                 }
                 await sleep(unitTime); // 音同士のスキマ
             }
