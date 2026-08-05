@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>モールス信号 変換＆学習ツール | Web Service Lab</title>
-    <meta name="description" content="アルファベットをモールス信号にリアルタイム変換し、音で聴いて学べるWebツールです！">
+    <title>モールス信号 トレーニング＆変換 | Web Service Lab</title>
+    <meta name="description" content="モールス信号のコース別トレーニングとリアルタイム変換ツールです。">
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -20,9 +20,15 @@
             text-align: center;
         }
         main {
-            max-width: 600px;
+            max-width: 650px;
             margin: 2rem auto;
             padding: 0 1rem;
+        }
+        .section-title {
+            border-bottom: 2px solid #2b3a4a;
+            padding-bottom: 5px;
+            margin-top: 2rem;
+            color: #2b3a4a;
         }
         .card {
             background: white;
@@ -31,6 +37,44 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 1.5rem;
         }
+        .course-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 6px solid #ccc;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .course-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .course-easy { border-left-color: #28a745; }
+        .course-normal { border-left-color: #ffc107; }
+        .course-hard { border-left-color: #dc3545; }
+
+        .course-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.2rem;
+        }
+        .course-info p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .btn-start {
+            display: inline-block;
+            padding: 10px 18px;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+        .btn-easy { background-color: #28a745; }
+        .btn-normal { background-color: #e0a800; }
+        .btn-hard { background-color: #dc3545; }
+
         input[type="text"] {
             width: 100%;
             padding: 10px;
@@ -44,15 +88,15 @@
             background: #1e1e1e;
             color: #00ff66;
             font-family: monospace;
-            font-size: 1.8rem;
+            font-size: 1.6rem;
             padding: 15px;
             border-radius: 6px;
             word-break: break-all;
             margin: 15px 0;
-            min-height: 50px;
+            min-height: 40px;
         }
-        button {
-            background-color: #28a745;
+        .btn-play {
+            background-color: #2b3a4a;
             color: white;
             border: none;
             padding: 12px 20px;
@@ -61,12 +105,12 @@
             cursor: pointer;
             width: 100%;
         }
-        button:hover {
-            background-color: #218838;
+        .btn-play:hover {
+            background-color: #1a2530;
         }
         .back-link {
             display: inline-block;
-            margin-top: 10px;
+            margin: 15px 0 30px;
             color: #2b3a4a;
             text-decoration: none;
         }
@@ -74,9 +118,39 @@
 </head>
 <body>
     <header>
-        <h1>📻 モールス信号 変換＆学習</h1>
+        <h1>📻 モールス信号 トレーニング</h1>
     </header>
     <main>
+        <h2 class="section-title">🎮 トレーニングコース選択</h2>
+        
+        <!-- 初級コース -->
+        <div class="card course-card course-easy">
+            <div class="course-info">
+                <h3>🟢 初級：1文字マスター</h3>
+                <p>基本の英数字1文字を聞き分ける基本練習</p>
+            </div>
+            <a href="easy.html" class="btn-start btn-easy">スタート →</a>
+        </div>
+
+        <!-- 中級コース -->
+        <div class="card course-card course-normal">
+            <div class="course-info">
+                <h3>🟡 中級：単語チャレンジ</h3>
+                <p>「SOS」「GAME」など3〜4文字の単語に挑戦</p>
+            </div>
+            <a href="normal.html" class="btn-start btn-normal">スタート →</a>
+        </div>
+
+        <!-- 上級コース -->
+        <div class="card course-card course-hard">
+            <div class="course-info">
+                <h3>🔴 上級：暗号解読</h3>
+                <p>5文字以上の長い単語や実戦的な文章</p>
+            </div>
+            <a href="hard.html" class="btn-start btn-hard">スタート →</a>
+        </div>
+
+        <h2 class="section-title">🛠️ 自由変換・確認ツール</h2>
         <div class="card">
             <label for="inputText"><strong>英数字を入力（半角）：</strong></label>
             <input type="text" id="inputText" placeholder="例: SOS または HELLO" oninput="convert()">
@@ -84,14 +158,13 @@
             <h3>変換結果：</h3>
             <div class="result-box" id="morseOutput">・・・ －－－ ・・・</div>
 
-            <button onclick="playMorse()">🔊 音を鳴らす（再生）</button>
+            <button class="btn-play" onclick="playMorse()">🔊 音を鳴らす（再生）</button>
         </div>
 
         <a href="index.html" class="back-link">← トップページに戻る</a>
     </main>
 
     <script>
-        // ① 正しいモールス信号の辞書データ
         const morseCode = {
             'A': '・－',    'B': '－・・・', 'C': '－・－・', 'D': '－・・',  'E': '・',
             'F': '・・－・', 'G': '－－・',  'H': '・・・・', 'I': '・・',    'J': '・－－－',
@@ -103,7 +176,6 @@
             '8': '－－－・・', '9': '－－－－・', '0': '－－－－－', ' ': ' / '
         };
 
-        // リアルタイムテキスト変換処理
         function convert() {
             const input = document.getElementById('inputText').value.toUpperCase();
             let output = '';
@@ -117,40 +189,36 @@
             document.getElementById('morseOutput').innerText = output.trim() || '（ここに表示されます）';
         }
 
-        // --- 🔊 ノイズ・再生ズレ対策済みの音声再生処理 ---
-        let currentAudioCtx = null; // 再生管理用の変数を外に出す
+        let currentAudioCtx = null;
 
         function playMorse() {
-            // ②【ノイズ・二重再生対策】すでに再生中の音があれば強制終了する
             if (currentAudioCtx) {
                 currentAudioCtx.close();
             }
 
-            // 新しいAudioContextを生成
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             currentAudioCtx = audioCtx;
 
             const text = document.getElementById('morseOutput').innerText;
-            const dotDuration = 0.08; // トン（短音）の長さ：0.08秒
-            const dashDuration = dotDuration * 3; // ツー（長音）の長さ：0.24秒
-            const freq = 600; // 周波数：600Hz
+            const dotDuration = 0.08;
+            const dashDuration = dotDuration * 3;
+            const freq = 600;
 
-            let startTime = audioCtx.currentTime + 0.05; // 0.05秒後に再生予約スタート
+            let startTime = audioCtx.currentTime + 0.05;
 
             for (let char of text) {
                 if (char === '・') {
                     scheduleTone(audioCtx, freq, startTime, dotDuration);
-                    startTime += dotDuration + dotDuration; // 音の長さ + スキマ
+                    startTime += dotDuration + dotDuration;
                 } else if (char === '－') {
                     scheduleTone(audioCtx, freq, startTime, dashDuration);
-                    startTime += dashDuration + dotDuration; // 音の長さ + スキマ
+                    startTime += dashDuration + dotDuration;
                 } else if (char === ' ' || char === '/') {
-                    startTime += dotDuration * 3; // 単語間の空白
+                    startTime += dotDuration * 3;
                 }
             }
         }
 
-        // ③【クリックノイズ対策】フェードイン・フェードアウトを入れる処理
         function scheduleTone(ctx, freq, startTime, duration) {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
@@ -158,11 +226,10 @@
             osc.type = 'sine';
             osc.frequency.setValueAtTime(freq, startTime);
 
-            // 音の出始めと終わりに0.005秒の滑らかな傾斜をつけてプチプチ音（クリックノイズ）を防ぐ
             gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.3, startTime + 0.005); // 音量アタック
+            gain.gain.linearRampToValueAtTime(0.3, startTime + 0.005);
             gain.gain.setValueAtTime(0.3, startTime + duration - 0.005);
-            gain.gain.linearRampToValueAtTime(0, startTime + duration); // 音量リリース
+            gain.gain.linearRampToValueAtTime(0, startTime + duration);
 
             osc.connect(gain);
             gain.connect(ctx.destination);
@@ -171,7 +238,6 @@
             osc.stop(startTime + duration);
         }
 
-        // 初期表示
         convert();
     </script>
 </body>
