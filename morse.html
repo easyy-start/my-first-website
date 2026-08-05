@@ -91,6 +91,7 @@
     </main>
 
     <script>
+        // ① 正しいモールス信号の辞書データ
         const morseCode = {
             'A': '・－',    'B': '－・・・', 'C': '－・－・', 'D': '－・・',  'E': '・',
             'F': '・・－・', 'G': '－－・',  'H': '・・・・', 'I': '・・',    'J': '・－－－',
@@ -102,7 +103,7 @@
             '8': '－－－・・', '9': '－－－－・', '0': '－－－－－', ' ': ' / '
         };
 
-        // 入力された文字をモールス信号にリアルタイム変換
+        // リアルタイムテキスト変換処理
         function convert() {
             const input = document.getElementById('inputText').value.toUpperCase();
             let output = '';
@@ -113,45 +114,61 @@
                     output += char + ' ';
                 }
             }
-            document.getElementById('morseOutput').innerText = output || '（ここに表示されます）';
+            document.getElementById('morseOutput').innerText = output.trim() || '（ここに表示されます）';
         }
 
-        // Web Audio APIを使ってブラウザだけで「ピ・ポー」と音を鳴らす処理
-        async function playMorse() {
+        // --- 🔊 ノイズ・再生ズレ対策済みの音声再生処理 ---
+        let currentAudioCtx = null; // 再生管理用の変数を外に出す
+
+        function playMorse() {
+            // ②【ノイズ・二重再生対策】すでに再生中の音があれば強制終了する
+            if (currentAudioCtx) {
+                currentAudioCtx.close();
+            }
+
+            // 新しいAudioContextを生成
             const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            currentAudioCtx = audioCtx;
+
             const text = document.getElementById('morseOutput').innerText;
-            
-            const unitTime = 0.10; // 1音の長さ（秒）
+            const dotDuration = 0.08; // トン（短音）の長さ：0.08秒
+            const dashDuration = dotDuration * 3; // ツー（長音）の長さ：0.24秒
+            const freq = 600; // 周波数：600Hz
+
+            let startTime = audioCtx.currentTime + 0.05; // 0.05秒後に再生予約スタート
 
             for (let char of text) {
                 if (char === '・') {
-                    await playTone(audioCtx, 600, unitTime * 1.5); // 短音（トン）
+                    scheduleTone(audioCtx, freq, startTime, dotDuration);
+                    startTime += dotDuration + dotDuration; // 音の長さ + スキマ
                 } else if (char === '－') {
-                    await playTone(audioCtx, 600, unitTime * 4); // 長音（ツー）
-                } else {
-                    await sleep(unitTime * 10); // スペースの間の無音
+                    scheduleTone(audioCtx, freq, startTime, dashDuration);
+                    startTime += dashDuration + dotDuration; // 音の長さ + スキマ
+                } else if (char === ' ' || char === '/') {
+                    startTime += dotDuration * 3; // 単語間の空白
                 }
-                await sleep(unitTime); // 音同士のスキマ
             }
         }
 
-        function playTone(ctx, freq, duration) {
-            return new Promise(resolve => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.frequency.value = freq;
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                setTimeout(() => {
-                    osc.stop();
-                    resolve();
-                }, duration * 1000);
-            });
-        }
+        // ③【クリックノイズ対策】フェードイン・フェードアウトを入れる処理
+        function scheduleTone(ctx, freq, startTime, duration) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
 
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+
+            // 音の出始めと終わりに0.005秒の滑らかな傾斜をつけてプチプチ音（クリックノイズ）を防ぐ
+            gain.gain.setValueAtTime(0, startTime);
+            gain.gain.linearRampToValueAtTime(0.3, startTime + 0.005); // 音量アタック
+            gain.gain.setValueAtTime(0.3, startTime + duration - 0.005);
+            gain.gain.linearRampToValueAtTime(0, startTime + duration); // 音量リリース
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + duration);
         }
 
         // 初期表示
