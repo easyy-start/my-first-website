@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🟢 初級コース：1文字マスター | モールス打</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        header {
+            background-color: #28a745;
+            color: white;
+            padding: 1rem;
+        }
+        main {
+            max-width: 500px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .question-box {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #28a745;
+            margin: 1rem 0;
+            min-height: 80px;
+        }
+        .btn-play {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+        }
+        .btn-play:hover {
+            background-color: #218838;
+        }
+        input[type="text"] {
+            font-size: 2rem;
+            width: 100px;
+            text-align: center;
+            padding: 5px;
+            border: 2px solid #ccc;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+        .result-msg {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-top: 1rem;
+            height: 30px;
+        }
+        .score-board {
+            margin-top: 1.5rem;
+            font-size: 1.1rem;
+            color: #555;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 2rem;
+            color: #2b3a4a;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🟢 初級：1文字マスター</h1>
+    </header>
+    <main>
+        <div class="card">
+            <p>音が鳴ったら、対応するアルファベットを1文字入力しよう！</p>
+
+            <!-- 音再生ボタン -->
+            <button class="btn-play" onclick="playCurrentQuestion()">🔊 もう一度音を聞く</button>
+
+            <!-- 問題表示エリア（初期はヒントとしてモールス記号を表示） -->
+            <div class="question-box" id="morseDisplay">・－</div>
+
+            <!-- 入力フォーム -->
+            <div>
+                <input type="text" id="userInput" maxlength="1" autofocus placeholder="?" oninput="checkAnswer()">
+            </div>
+
+            <!-- 正解 / 不正解 メッセージ -->
+            <div class="result-msg" id="resultMsg"></div>
+
+            <!-- スコア表示 -->
+            <div class="score-board">
+                正解数: <span id="score">0</span> 問
+            </div>
+        </div>
+
+        <a href="morse.html" class="back-link">← コース選択に戻る</a>
+    </main>
+
+    <script>
+        // 1文字用の問題データ（A〜Z）
+        const questions = [
+            { char: 'A', morse: '・－' },    { char: 'B', morse: '－・・・' }, { char: 'C', morse: '－・－・' },
+            { char: 'D', morse: '－・・' },  { char: 'E', morse: '・' },       { char: 'F', morse: '・・－・' },
+            { char: 'G', morse: '－－・' },  { char: 'H', morse: '・・・・' }, { char: 'I', morse: '・・' },
+            { char: 'J', morse: '・－－－' }, { char: 'K', morse: '－・－' },  { char: 'L', morse: '・－・・' },
+            { char: 'M', morse: '－－' },    { char: 'N', morse: '－・' },     { char: 'O', morse: '－－－' },
+            { char: 'P', morse: '・－－・' }, { char: 'Q', morse: '－－・－' }, { char: 'R', morse: '・－・' },
+            { char: 'S', morse: '・・・' },   { char: 'T', morse: '－' },       { char: 'U', morse: '・・－' },
+            { char: 'V', morse: '・・・－' }, { char: 'W', morse: '・－－' },  { char: 'X', morse: '－・・－' },
+            { char: 'Y', morse: '－・－－' }, { char: 'Z', morse: '－－・・' }
+        ];
+
+        let currentQ = null;
+        let score = 0;
+        let currentAudioCtx = null;
+
+        // 次の問題をセット
+        function nextQuestion() {
+            const randomIndex = Math.floor(Math.random() * questions.length);
+            currentQ = questions[randomIndex];
+            document.getElementById('morseDisplay').innerText = currentQ.morse;
+            document.getElementById('userInput').value = '';
+            document.getElementById('resultMsg').innerText = '';
+            
+            // 問題が変わったら自動で音を鳴らす
+            setTimeout(() => {
+                playCurrentQuestion();
+            }, 300);
+        }
+
+        // 答え合わせ処理
+        function checkAnswer() {
+            const input = document.getElementById('userInput').value.toUpperCase();
+            if (!input) return;
+
+            if (input === currentQ.char) {
+                document.getElementById('resultMsg').style.color = '#28a745';
+                document.getElementById('resultMsg').innerText = '⭕ 正解！';
+                score++;
+                document.getElementById('score').innerText = score;
+                setTimeout(nextQuestion, 800); // 0.8秒後に次の問題へ
+            } else {
+                document.getElementById('resultMsg').style.color = '#dc3545';
+                document.getElementById('resultMsg').innerText = '❌ ちがうよ！';
+            }
+        }
+
+        // 音声を鳴らす処理（ノイズ対策済み）
+        function playCurrentQuestion() {
+            if (!currentQ) return;
+            if (currentAudioCtx) currentAudioCtx.close();
+
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            currentAudioCtx = audioCtx;
+
+            const dotDuration = 0.09;
+            const dashDuration = dotDuration * 3;
+            const freq = 600;
+            let startTime = audioCtx.currentTime + 0.05;
+
+            for (let symbol of currentQ.morse) {
+                if (symbol === '・') {
+                    scheduleTone(audioCtx, freq, startTime, dotDuration);
+                    startTime += dotDuration + dotDuration;
+                } else if (symbol === '－') {
+                    scheduleTone(audioCtx, freq, startTime, dashDuration);
+                    startTime += dashDuration + dotDuration;
+                }
+            }
+        }
+
+        function scheduleTone(ctx, freq, startTime, duration) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+
+            gain.gain.setValueAtTime(0, startTime);
+            gain.gain.linearRampToValueAtTime(0.3, startTime + 0.005);
+            gain.gain.setValueAtTime(0.3, startTime + duration - 0.005);
+            gain.gain.linearRampToValueAtTime(0, startTime + duration);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        }
+
+        // ページ読み込み時に最初の問題を出す
+        window.onload = () => {
+            nextQuestion();
+        };
+    </script>
+</body>
+</html>
