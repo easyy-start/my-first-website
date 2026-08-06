@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🟢 初級コース：1文字マスター | モールス打</title>
+    <title>🟡 中級コース：1文字聞き取りマスター | モールス打</title>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -14,7 +14,7 @@
             text-align: center;
         }
         header {
-            background-color: #28a745;
+            background-color: #e0a800;
             color: white;
             padding: 1rem;
         }
@@ -29,15 +29,16 @@
             padding: 2rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .question-box {
-            font-size: 4rem;
+        .hint-box {
+            font-size: 3rem;
             font-weight: bold;
-            color: #28a745;
+            color: #e0a800;
             margin: 1rem 0;
-            min-height: 80px;
+            min-height: 60px;
+            letter-spacing: 4px;
         }
         .btn-play {
-            background-color: #28a745;
+            background-color: #e0a800;
             color: white;
             border: none;
             padding: 12px 24px;
@@ -45,12 +46,13 @@
             border-radius: 5px;
             cursor: pointer;
             margin-bottom: 1.5rem;
+            font-weight: bold;
         }
         .btn-play:hover {
-            background-color: #218838;
+            background-color: #c69500;
         }
         input[type="text"] {
-            font-size: 2rem;
+            font-size: 2.5rem;
             width: 100px;
             text-align: center;
             padding: 5px;
@@ -79,17 +81,17 @@
 </head>
 <body>
     <header>
-        <h1>🟢 初級：1文字マスター</h1>
+        <h1>🟡 中級：1文字聞き取りマスター</h1>
     </header>
     <main>
         <div class="card">
-            <p>音が鳴ったら、対応するアルファベットを1文字入力しよう！</p>
+            <p>音が鳴ったら、対応するアルファベットを入力しよう！</p>
 
             <!-- 音再生ボタン -->
             <button class="btn-play" onclick="playCurrentQuestion()">🔊 もう一度音を聞く</button>
 
-            <!-- 問題表示エリア（初期はヒントとしてモールス記号を表示） -->
-            <div class="question-box" id="morseDisplay">・－</div>
+            <!-- ヒント（モールス記号）表示エリア -->
+            <div class="hint-box" id="morseDisplay">・－</div>
 
             <!-- 入力フォーム -->
             <div>
@@ -109,7 +111,6 @@
     </main>
 
     <script>
-        // 1文字用の問題データ（A〜Z）
         const questions = [
             { char: 'A', morse: '・－' },    { char: 'B', morse: '－・・・' }, { char: 'C', morse: '－・－・' },
             { char: 'D', morse: '－・・' },  { char: 'E', morse: '・' },       { char: 'F', morse: '・・－・' },
@@ -133,6 +134,7 @@
             document.getElementById('morseDisplay').innerText = currentQ.morse;
             document.getElementById('userInput').value = '';
             document.getElementById('resultMsg').innerText = '';
+            document.getElementById('userInput').focus();
             
             // 問題が変わったら自動で音を鳴らす
             setTimeout(() => {
@@ -142,18 +144,25 @@
 
         // 答え合わせ処理
         function checkAnswer() {
-            const input = document.getElementById('userInput').value.toUpperCase();
+            const inputEl = document.getElementById('userInput');
+            const input = inputEl.value.toUpperCase();
             if (!input) return;
 
             if (input === currentQ.char) {
+                // ⭕ 正解の場合
                 document.getElementById('resultMsg').style.color = '#28a745';
                 document.getElementById('resultMsg').innerText = '⭕ 正解！';
                 score++;
                 document.getElementById('score').innerText = score;
-                setTimeout(nextQuestion, 800); // 0.8秒後に次の問題へ
+                setTimeout(nextQuestion, 600); // 0.6秒後に次の問題へ
             } else {
+                // ❌ 不正解の場合（問題はそのままで入力欄だけクリア）
                 document.getElementById('resultMsg').style.color = '#dc3545';
-                document.getElementById('resultMsg').innerText = '❌ ちがうよ！';
+                document.getElementById('resultMsg').innerText = '❌ ちがうよ！もう一度！';
+                setTimeout(() => {
+                    inputEl.value = '';
+                    inputEl.focus();
+                }, 400); // 0.4秒後にクリアして再入力へ
             }
         }
 
