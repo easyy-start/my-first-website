@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🟢 初級コース：1文字ずつ打ってみる | モールス打</title>
+    <title>🟢 初級コース：1文字マスター | モールス打</title>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -29,43 +29,67 @@
             padding: 2rem;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .question-box {
+        .mode-select {
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+        .mode-select label {
+            margin: 0 10px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .target-char {
             font-size: 4rem;
             font-weight: bold;
-            color: #28a745;
-            margin: 1rem 0;
-            min-height: 80px;
+            color: #333;
+            margin: 0;
         }
-        .btn-play {
-            background-color: #28a745;
+        .target-morse {
+            font-size: 2.2rem;
+            color: #28a745;
+            letter-spacing: 4px;
+            margin: 0.5rem 0 1.5rem 0;
+            font-weight: bold;
+        }
+        .input-display {
+            background: #1e1e1e;
+            color: #00ff66;
+            font-family: monospace;
+            font-size: 2.5rem;
+            padding: 15px;
+            border-radius: 6px;
+            min-height: 40px;
+            letter-spacing: 6px;
+            margin: 1rem 0;
+        }
+        .key-guide {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+        .btn-reset {
+            background-color: #6c757d;
             color: white;
             border: none;
-            padding: 12px 24px;
-            font-size: 1.1rem;
-            border-radius: 5px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            border-radius: 4px;
             cursor: pointer;
-            margin-bottom: 1.5rem;
         }
-        .btn-play:hover {
-            background-color: #218838;
-        }
-        input[type="text"] {
-            font-size: 2rem;
-            width: 100px;
-            text-align: center;
-            padding: 5px;
-            border: 2px solid #ccc;
-            border-radius: 6px;
-            text-transform: uppercase;
+        .btn-reset:hover {
+            background-color: #5a6268;
         }
         .result-msg {
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             font-weight: bold;
             margin-top: 1rem;
-            height: 30px;
+            height: 35px;
         }
         .score-board {
-            margin-top: 1.5rem;
+            margin-top: 1rem;
             font-size: 1.1rem;
             color: #555;
         }
@@ -79,37 +103,40 @@
 </head>
 <body>
     <header>
-        <h1>🟢 初級：1文字ずつ打ってみる</h1>
+        <h1>🟢 初級：1文字マスター</h1>
     </header>
     <main>
         <div class="card">
-            <p>音が鳴ったら、対応するアルファベットを1文字入力しよう！</p>
-
-            <!-- 音再生ボタン -->
-            <button class="btn-play" onclick="playCurrentQuestion()">🔊 もう一度音を聞く</button>
-
-            <!-- 問題表示エリア（初期はヒントとしてモールス記号を表示） -->
-            <div class="question-box" id="morseDisplay">・－</div>
-
-            <!-- 入力フォーム -->
-            <div>
-                <input type="text" id="userInput" maxlength="1" autofocus placeholder="?" oninput="checkAnswer()">
+            <!-- モード選択 -->
+            <div class="mode-select">
+                出題順：
+                <label><input type="radio" name="mode" value="order" checked onchange="resetGame()"> 順番（A-Z）</label>
+                <label><input type="radio" name="mode" value="random" onchange="resetGame()"> ランダム</label>
             </div>
 
-            <!-- 正解 / 不正解 メッセージ -->
+            <!-- 出題ターゲット -->
+            <div class="target-char" id="targetChar">A</div>
+            <div class="target-morse" id="targetMorse">・－</div>
+
+            <div class="key-guide">
+                ⌨️ <strong>[スペースキー]</strong> を押して打とう！<br>
+                チョン押し：<strong>「・」</strong> / 長押し：<strong>「－」</strong>
+            </div>
+
+            <!-- 自分が打ったモールス信号 -->
+            <div class="input-display" id="userMorse">（ここに表示）</div>
+
+            <button class="btn-reset" onclick="clearInput()">打ち直す</button>
+
+            <!-- メッセージ & スコア -->
             <div class="result-msg" id="resultMsg"></div>
-
-            <!-- スコア表示 -->
-            <div class="score-board">
-                正解数: <span id="score">0</span> 問
-            </div>
+            <div class="score-board">正解数: <span id="score">0</span> 問</div>
         </div>
 
         <a href="morse.html" class="back-link">← コース選択に戻る</a>
     </main>
 
     <script>
-        // 1文字用の問題データ（A〜Z）
         const questions = [
             { char: 'A', morse: '・－' },    { char: 'B', morse: '－・・・' }, { char: 'C', morse: '－・－・' },
             { char: 'D', morse: '－・・' },  { char: 'E', morse: '・' },       { char: 'F', morse: '・・－・' },
@@ -122,88 +149,140 @@
             { char: 'Y', morse: '－・－－' }, { char: 'Z', morse: '－－・・' }
         ];
 
+        let currentIndex = 0;
         let currentQ = null;
+        let userInputMorse = '';
         let score = 0;
-        let currentAudioCtx = null;
+
+        // キー長押し判定＆音声生成用の変数
+        let keyDownTime = 0;
+        let isKeyPressed = false;
+        let audioCtx = null;
+        let currentOsc = null;
+        let currentGain = null;
+
+        // ゲーム初期化 / リセット
+        function resetGame() {
+            currentIndex = 0;
+            score = 0;
+            document.getElementById('score').innerText = score;
+            nextQuestion();
+        }
 
         // 次の問題をセット
         function nextQuestion() {
-            const randomIndex = Math.floor(Math.random() * questions.length);
-            currentQ = questions[randomIndex];
-            document.getElementById('morseDisplay').innerText = currentQ.morse;
-            document.getElementById('userInput').value = '';
-            document.getElementById('resultMsg').innerText = '';
+            const mode = document.querySelector('input[name="mode"]:checked').value;
             
-            // 問題が変わったら自動で音を鳴らす
-            setTimeout(() => {
-                playCurrentQuestion();
-            }, 300);
+            if (mode === 'random') {
+                const randomIndex = Math.floor(Math.random() * questions.length);
+                currentQ = questions[randomIndex];
+            } else {
+                currentQ = questions[currentIndex % questions.length];
+            }
+
+            document.getElementById('targetChar').innerText = currentQ.char;
+            document.getElementById('targetMorse').innerText = currentQ.morse;
+            clearInput();
         }
 
-        // 答え合わせ処理
-        function checkAnswer() {
-            const input = document.getElementById('userInput').value.toUpperCase();
-            if (!input) return;
+        // 入力をクリア
+        function clearInput() {
+            userInputMorse = '';
+            document.getElementById('userMorse').innerText = '（ここに表示）';
+            document.getElementById('resultMsg').innerText = '';
+        }
 
-            if (input === currentQ.char) {
-                document.getElementById('resultMsg').style.color = '#28a745';
-                document.getElementById('resultMsg').innerText = '⭕ 正解！';
-                score++;
-                document.getElementById('score').innerText = score;
-                setTimeout(nextQuestion, 800); // 0.8秒後に次の問題へ
-            } else {
-                document.getElementById('resultMsg').style.color = '#dc3545';
-                document.getElementById('resultMsg').innerText = '❌ ちがうよ！';
+        // --- 🔊 音を鳴らす処理（リアルタイム発音） ---
+        function startTone() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (currentOsc) return; // 既に鳴っていればスルー
+
+            currentOsc = audioCtx.createOscillator();
+            currentGain = audioCtx.createGain();
+
+            currentOsc.type = 'sine';
+            currentOsc.frequency.setValueAtTime(600, audioCtx.currentTime);
+
+            // ノイズ防止用フェードイン
+            currentGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            currentGain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.005);
+
+            currentOsc.connect(currentGain);
+            currentGain.connect(audioCtx.destination);
+            currentOsc.start();
+        }
+
+        function stopTone() {
+            if (currentOsc && currentGain && audioCtx) {
+                // ノイズ防止用フェードアウト
+                currentGain.gain.setValueAtTime(currentGain.gain.value, audioCtx.currentTime);
+                currentGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.005);
+                
+                setTimeout(() => {
+                    if (currentOsc) {
+                        currentOsc.stop();
+                        currentOsc.disconnect();
+                        currentOsc = null;
+                        currentGain = null;
+                    }
+                }, 10);
             }
         }
 
-        // 音声を鳴らす処理（ノイズ対策済み）
-        function playCurrentQuestion() {
-            if (!currentQ) return;
-            if (currentAudioCtx) currentAudioCtx.close();
+        // --- ⌨️ スペースキー入力イベント ---
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault(); // 画面スクロール防止
+                isKeyPressed = true;
+                keyDownTime = Date.now();
+                startTone(); // 音を鳴らし始める
+            }
+        });
 
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            currentAudioCtx = audioCtx;
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' && isKeyPressed) {
+                e.preventDefault();
+                isKeyPressed = false;
+                stopTone(); // 音を止める
 
-            const dotDuration = 0.09;
-            const dashDuration = dotDuration * 3;
-            const freq = 600;
-            let startTime = audioCtx.currentTime + 0.05;
+                // 押していた時間を計算
+                const duration = Date.now() - keyDownTime;
+                
+                // 200ms未満は「・」、200ms以上は「－」
+                if (duration < 200) {
+                    userInputMorse += '・';
+                } else {
+                    userInputMorse += '－';
+                }
 
-            for (let symbol of currentQ.morse) {
-                if (symbol === '・') {
-                    scheduleTone(audioCtx, freq, startTime, dotDuration);
-                    startTime += dotDuration + dotDuration;
-                } else if (symbol === '－') {
-                    scheduleTone(audioCtx, freq, startTime, dashDuration);
-                    startTime += dashDuration + dotDuration;
+                document.getElementById('userMorse').innerText = userInputMorse;
+                checkMorse();
+            }
+        });
+
+        // 判定処理
+        function checkMorse() {
+            // 長さが一致したタイミングで判定
+            if (userInputMorse.length === currentQ.morse.length) {
+                if (userInputMorse === currentQ.morse) {
+                    document.getElementById('resultMsg').style.color = '#28a745';
+                    document.getElementById('resultMsg').innerText = '⭕ 正解！';
+                    score++;
+                    document.getElementById('score').innerText = score;
+                    currentIndex++;
+                    setTimeout(nextQuestion, 600); // 0.6秒後に次へ
+                } else {
+                    document.getElementById('resultMsg').style.color = '#dc3545';
+                    document.getElementById('resultMsg').innerText = '❌ ちがうよ！';
+                    setTimeout(clearInput, 800); // 0.8秒後に自動リセット
                 }
             }
         }
 
-        function scheduleTone(ctx, freq, startTime, duration) {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(freq, startTime);
-
-            gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.3, startTime + 0.005);
-            gain.gain.setValueAtTime(0.3, startTime + duration - 0.005);
-            gain.gain.linearRampToValueAtTime(0, startTime + duration);
-
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            osc.start(startTime);
-            osc.stop(startTime + duration);
-        }
-
-        // ページ読み込み時に最初の問題を出す
-        window.onload = () => {
-            nextQuestion();
-        };
+        // 初期表示
+        resetGame();
     </script>
 </body>
 </html>
