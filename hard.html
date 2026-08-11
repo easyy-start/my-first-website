@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🔵 上級コース：単語の発振と解読 | モールス打</title>
+    <title>🔵 上級コース：単語の練習 | モールス打</title>
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -117,7 +117,7 @@
 </head>
 <body>
     <header>
-        <h1>🔵 上級：単語の実践トレーニング！</h1>
+        <h1>🔵 上級：単語の実践トレーニング</h1>
     </header>
     <main>
         <div class="card">
@@ -127,26 +127,23 @@
                 <label><input type="radio" name="mode" value="rx" onchange="switchMode()"> 🎧 解読モード（読む）</label>
             </div>
 
-            <!-- 日本語の意味（TXモード時のみ表示、RXモード時は隠す） -->
+            <!-- 日本語の意味（TXモード時のみ表示） -->
             <div class="target-meaning" id="targetMeaning">（意味）</div>
             
             <!-- 発振（TX）モード用 UI -->
             <div id="txSection" class="section active">
-                <!-- 正解した文字が赤色に変わる表示領域 -->
                 <div class="target-word" id="txTargetWord">WORD</div>
                 
                 <div class="key-guide">
-                    ⌨️ <strong>[スペースキー]</strong> で打鍵<br>
-            <!----正解した文字から順番に赤色に変わります！---->
+                    ⌨️ <strong>[スペースキー]</strong> で打鍵します
                 </div>
                 
                 <div class="input-display" id="userMorse">(ここに表示）</div> 
-                <button class="btn" onclick="resetInput()">やり直す</button>
+                <button class="btn" onclick="resetTxInput()">最初から打ち直す</button>
             </div>
 
             <!-- 解読（RX）モード用 UI -->
             <div id="rxSection" class="section">
-                <!-- モールス信号のみを表示（日本語や単語は非表示） -->
                 <div class="target-morse" id="rxTargetMorse">・－－ －－－ ・－・ －・・</div>
                 <div class="key-guide">上記のモールス信号を解読し、ローマ字を入力してください</div>
                 <input type="text" id="rxInput" class="decode-input" placeholder="ローマ字を入力" autocomplete="off" onkeydown="if(event.key==='Enter') checkRx()">
@@ -188,14 +185,16 @@
 
         let currentMode = 'tx';
         let currentQ = null;
-        let currentTargetMorseSpace = '';
-        let userInputMorse = '';
         let score = 0;
+
+        // 発振（TX）モードの状態管理
+        let charIndex = 0;            // 現在何文字目に挑戦しているか
+        let currentCharInput = '';    // 現在の文字に対して打ったモールス
+        let completedMorseList = [];  // 入力完了した文字のモールス記録
 
         const THRESHOLD_MS = 150;
         let keyDownTime = 0;
         let isKeyPressed = false;
-        let spaceTimer = null;
         
         let audioCtx = null;
         let currentOsc = null;
@@ -215,60 +214,45 @@
         function nextQuestion() {
             const randomIndex = Math.floor(Math.random() * wordList.length);
             currentQ = wordList[randomIndex];
-            currentTargetMorseSpace = getMorseString(currentQ.word);
 
             if (currentMode === 'tx') {
-                // 発振モード：日本語とローマ字（最初は黒一色）を表示
                 document.getElementById('targetMeaning').style.display = 'block';
                 document.getElementById('targetMeaning').innerText = currentQ.meaning;
-                resetInput();
+                resetTxInput();
             } else {
-                // 解読モード：日本語や元の単語は隠し、モールス信号のみ表示
                 document.getElementById('targetMeaning').style.display = 'none';
-                document.getElementById('rxTargetMorse').innerText = currentTargetMorseSpace;
+                document.getElementById('rxTargetMorse').innerText = getMorseString(currentQ.word);
                 document.getElementById('rxInput').value = '';
                 document.getElementById('rxInput').focus();
             }
             document.getElementById('resultMsg').innerText = '';
         }
 
-        function resetInput() {
-            userInputMorse = '';
-            document.getElementById('userMorse').innerText = 'start';
+        function resetTxInput() {
+            charIndex = 0;
+            currentCharInput = '';
+            completedMorseList = [];
             document.getElementById('resultMsg').innerText = '';
-            updateTxWordProgress();
+            updateTxDisplay();
         }
 
-        // --- 🔴 発振モードの進行度更新（文字を黒→赤へ） ---
-        function updateTxWordProgress() {
+        // 発振モードの表示更新（進行度・入力中モールスの反映）
+        function updateTxDisplay() {
             if (!currentQ) return;
             const word = currentQ.word;
-            const cleanInput = userInputMorse.replace(/\s/g, '');
-            
-            let matchedCount = 0;
-            let accumulatedMorse = '';
+            const matchedText = word.slice(0, charIndex);
+            const remainingText = word.slice(charIndex);
 
-            // 頭からどこまで正しくモールス信号が打たれているか計算
-            for (let i = 0; i < word.length; i++) {
-                const charMorse = morseDict[word[i]];
-                const nextAccumulated = accumulatedMorse + charMorse;
-
-                if (cleanInput.length >= nextAccumulated.length && cleanInput.startsWith(nextAccumulated)) {
-                    matchedCount = i + 1;
-                    accumulatedMorse = nextAccumulated;
-                } else {
-                    break;
-                }
-            }
-
-            const matchedText = word.slice(0, matchedCount);
-            const remainingText = word.slice(matchedCount);
-
-            // 正解分を赤色(#e53e3e)、未入力分を黒色(#2d3748)にレンダリング
+            // 正解済みの文字を赤、未入力をダークグレーで表示
             document.getElementById('txTargetWord').innerHTML = 
                 `<span style="color: #e53e3e;">${matchedText}</span><span style="color: #2d3748;">${remainingText}</span>`;
 
-            return { matchedCount, totalLength: word.length, accumulatedMorse };
+            // モールス表示領域（完了分 ＋ 現在入力中の文字分）
+            let displayMorse = completedMorseList.join(' ');
+            if (currentCharInput) {
+                displayMorse += (displayMorse ? ' ' : '') + currentCharInput;
+            }
+            document.getElementById('userMorse').innerText = displayMorse || 'start';
         }
 
         // --- 🔊 音声処理 ---
@@ -306,7 +290,6 @@
                 e.preventDefault();
                 isKeyPressed = true;
                 keyDownTime = Date.now();
-                clearTimeout(spaceTimer);
                 startTone();
             }
         });
@@ -319,42 +302,42 @@
                 stopTone();
 
                 const duration = Date.now() - keyDownTime;
-                userInputMorse += (duration < THRESHOLD_MS) ? '・' : '－';
-                document.getElementById('userMorse').innerText = userInputMorse;
+                const symbol = (duration < THRESHOLD_MS) ? '・' : '－';
+                currentCharInput += symbol;
 
-                // 打鍵の度にリアルタイムで文字の赤変・エラーチェック
-                checkTxProgress();
+                const targetChar = currentQ.word[charIndex];
+                const expectedMorse = morseDict[targetChar];
 
-                spaceTimer = setTimeout(() => {
-                    if(userInputMorse.length > 0 && !userInputMorse.endsWith(' ')) {
-                        userInputMorse += ' ';
-                        document.getElementById('userMorse').innerText = userInputMorse;
+                if (expectedMorse === currentCharInput) {
+                    // 1文字成功！次の文字に進む
+                    completedMorseList.push(currentCharInput);
+                    charIndex++;
+                    currentCharInput = '';
+                    document.getElementById('resultMsg').innerText = '';
+                    updateTxDisplay();
+
+                    // 単語全体の完了チェック
+                    if (charIndex === currentQ.word.length) {
+                        success();
                     }
-                }, 400);
+                } else if (expectedMorse.startsWith(currentCharInput)) {
+                    // 正しい途中経過なので入力を継続
+                    updateTxDisplay();
+                } else {
+                    // ミス！現在の文字入力のみリセットし、その文字から再挑戦
+                    document.getElementById('resultMsg').style.color = '#dc3545';
+                    document.getElementById('resultMsg').innerText = '❌ この文字をもう一度！';
+                    currentCharInput = '';
+                    updateTxDisplay();
+                    
+                    setTimeout(() => {
+                        if (document.getElementById('resultMsg').innerText.includes('もう一度')) {
+                            document.getElementById('resultMsg').innerText = '';
+                        }
+                    }, 800);
+                }
             }
         });
-
-        // 発振モードの判定処理
-        function checkTxProgress() {
-            const word = currentQ.word;
-            const cleanInput = userInputMorse.replace(/\s/g, '');
-            const targetCleanMorse = currentTargetMorseSpace.replace(/\s/g, '');
-
-            const { matchedCount } = updateTxWordProgress();
-
-            // 単語まるごと完成した場合
-            if (matchedCount === word.length) {
-                success();
-                return;
-            }
-
-            // 正解ルートから外れた打鍵（誤打）をした場合の検知
-            if (!targetCleanMorse.startsWith(cleanInput)) {
-                document.getElementById('resultMsg').style.color = '#dc3545';
-                document.getElementById('resultMsg').innerText = '❌ 打鍵ミス！やり直します';
-                setTimeout(resetInput, 1000);
-            }
-        }
 
         // 解読（RX）モードの判定
         function checkRx() {
