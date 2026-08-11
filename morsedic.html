@@ -145,7 +145,7 @@
                     scheduleTone(audioCtx, freq, startTime, dashDuration);
                     startTime += dashDuration + dotDuration; // 音の長さ + スキマ
                 } else if (char === ' ' || char === '/') {
-                    startTime += dotDuration * 3; // 単語間の空白
+                    startTime += dotDuration * 3; // 単語間の空白！
                 }
             }
         }
