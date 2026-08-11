@@ -77,30 +77,7 @@
             color: #2b3a4a;
             text-decoration: none;
         }
-         /* ボタン表示２, 編集 */
-        .morse-btn {
-            width: 100%;
-            height: 100px; /* 押しやすいように大きく */
-            background-color: #28a745;
-            color: white;
-            font-size: 1.3rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 4px #1e7e34;
-            cursor: pointer;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            margin-top: 10px;
-        }
         
-        /* 押している間、ボタンが沈む演出 */
-        .morse-btn:active, .morse-btn.active {
-            transform: translateY(3px);
-            box-shadow: 0 1px #1e7e34;
-            background-color: #218838;
-        }
     </style>
 </head>
 <body>
@@ -129,10 +106,7 @@
             <div class="score-board">
                 正解数: <span id="score">0</span> 問
             </div>
-            <!-- タップ用ボタン、編集 -->
-            <button class="morse-btn" id="morseBtn">
-                📻 ここを押す（スペースキーも可）
-            </button>
+           
         </div>
 
         <a href="morse.html" class="back-link">← コース選択に戻る</a>
