@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔵 上級コース：単語の発振と解読 | モールス打</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+        header {
+            background-color: #0056b3; /* 上級コースはブルー系 */
+            color: white;
+            padding: 1rem;
+        }
+        main {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .mode-select {
+            margin-bottom: 1.5rem;
+            padding: 10px;
+            background: #e2e8f0;
+            border-radius: 6px;
+        }
+        .mode-select label {
+            margin: 0 15px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .target-word {
+            font-size: 2.5rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin: 0;
+        }
+        .target-meaning {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        .target-morse {
+            font-size: 1.8rem;
+            color: #0056b3;
+            letter-spacing: 4px;
+            margin: 1rem 0;
+            font-weight: bold;
+            word-wrap: break-word;
+        }
+        .input-display {
+            background: #1a202c;
+            color: #63b3ed;
+            font-family: monospace;
+            font-size: 1.8rem;
+            padding: 15px;
+            border-radius: 6px;
+            min-height: 40px;
+            letter-spacing: 4px;
+            margin: 1rem 0;
+            word-wrap: break-word;
+        }
+        .key-guide {
+            background: #e2e8f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.95rem;
+            color: #4a5568;
+            margin-bottom: 1rem;
+        }
+        .decode-input {
+            font-size: 1.5rem;
+            padding: 10px;
+            width: 80%;
+            text-transform: uppercase;
+            text-align: center;
+            border: 2px solid #cbd5e0;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+        }
+        .btn {
+            background-color: #4a5568;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover { background-color: #2d3748; }
+        .btn-action { background-color: #0056b3; }
+        .btn-action:hover { background-color: #004494; }
+        
+        .result-msg {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-top: 1rem;
+            height: 35px;
+        }
+        .section { display: none; }
+        .section.active { display: block; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔵 上級：単語の発振と解読（150ms境界）</h1>
+    </header>
+    <main>
+        <div class="card">
+            <!-- モード選択 -->
+            <div class="mode-select">
+                <label><input type="radio" name="mode" value="tx" checked onchange="switchMode()"> 📡 発振モード（打つ）</label>
+                <label><input type="radio" name="mode" value="rx" onchange="switchMode()"> 🎧 解読モード（読む）</label>
+            </div>
+
+            <!-- 出題エリア -->
+            <div class="target-meaning" id="targetMeaning">（意味）</div>
+            
+            <!-- 発振（TX）モード用 UI -->
+            <div id="txSection" class="section active">
+                <div class="target-word" id="txTargetWord">WORD</div>
+                <div class="target-morse" id="txTargetMorse">・－－ －－－ ・－・ －・・</div>
+                
+                <div class="key-guide">
+                    ⌨️ <strong>[スペースキー]</strong> で打鍵（境界: 150ms）<br>
+                    ※文字と文字の間は自動でスペースが空きます（0.4秒待機）
+                </div>
+                
+                <div class="input-display" id="userMorse">(ここに表示）</div> 
+                <button class="btn" onclick="resetInput()">やり直す</button>
+            </div>
+
+            <!-- 解読（RX）モード用 UI -->
+            <div id="rxSection" class="section">
+                <div class="target-morse" id="rxTargetMorse" style="font-size: 2.2rem; margin-bottom: 2rem;">・－－ －－－ ・－・ －・・</div>
+                <div class="key-guide">上記のモールス信号を解読し、ローマ字で入力してください</div>
+                <input type="text" id="rxInput" class="decode-input" placeholder="ローマ字を入力" autocomplete="off" onkeydown="if(event.key==='Enter') checkRx()">
+                <br>
+                <button class="btn btn-action" onclick="checkRx()">解読する</button>
+                <button class="btn" onclick="nextQuestion()">スキップ</button>
+            </div>
+
+            <!-- 共通：メッセージ & スコア -->
+            <div class="result-msg" id="resultMsg"></div>
+            <div style="margin-top: 1rem; color: #555;">正解数: <span id="score">0</span> 問</div>
+        </div>
+    </main>
+
+    <script>
+        // A-Zのモールス辞書
+        const morseDict = {
+            'A': '・－', 'B': '－・・・', 'C': '－・－・', 'D': '－・・', 'E': '・', 'F': '・・－・',
+            'G': '－－・', 'H': '・・・・', 'I': '・・', 'J': '・－－－', 'K': '－・－', 'L': '・－・・',
+            'M': '－－', 'N': '－・', 'O': '－－－', 'P': '・－－・', 'Q': '－－・－', 'R': '・－・',
+            'S': '・・・', 'T': '－', 'U': '・・－', 'V': '・・・－', 'W': '・－－', 'X': '－・・－',
+            'Y': '－・－－', 'Z': '－－・・'
+        };
+
+        // 5文字以上の単語・熟語リスト（繰り返しを避けるため多めに収録）
+        const wordList = [
+            { word: 'ARIGATOU', meaning: 'ありがとう' }, { word: 'SAKURA', meaning: '桜（さくら）' },
+            { word: 'SAMURAI', meaning: '侍（さむらい）' }, { word: 'HANABI', meaning: '花火（はなび）' },
+            { word: 'MATSURI', meaning: '祭り（まつり）' }, { word: 'FUJISAN', meaning: '富士山（ふじさん）' },
+            { word: 'ORIGAMI', meaning: '折り紙（おりがみ）' }, { word: 'SHINKANSEN', meaning: '新幹線（しんかんせん）' },
+            { word: 'KABUKI', meaning: '歌舞伎（かぶき）' }, { word: 'BONSAI', meaning: '盆栽（ぼんさい）' },
+            { word: 'KARATE', meaning: '空手（からて）' }, { word: 'TEMPURA', meaning: '天ぷら（てんぷら）' },
+            { word: 'SUKIYAKI', meaning: 'すき焼き（すきやき）' }, { word: 'YAKITORI', meaning: '焼き鳥（やきとり）' },
+            { word: 'TSUNAMI', meaning: '津波（つなみ）' }, { word: 'OHAYOU', meaning: 'おはよう' },
+            { word: 'SAYOUNARA', meaning: 'さようなら' }, { word: 'KONNICHIWA', meaning: 'こんにちは' },
+            { word: 'OMEDETOU', meaning: 'おめでとう' }, { word: 'SUBARASHII', meaning: '素晴らしい' },
+            { word: 'KOKORO', meaning: '心（こころ）' }, { word: 'YAMATO', meaning: '大和（やまと）' },
+            { word: 'KIZUNA', meaning: '絆（きずな）' }, { word: 'HIMAWARI', meaning: '向日葵（ひまわり）' },
+            { word: 'NIPPON', meaning: '日本（にっぽん）' }
+        ];
+
+        let currentMode = 'tx';
+        let currentQ = null;
+        let currentTargetMorseSpace = ''; // スペース区切りの正解モールス
+        let userInputMorse = '';
+        let score = 0;
+
+        // 音声・打鍵用
+        const THRESHOLD_MS = 150; // 【変更点】150msを境界とする
+        let keyDownTime = 0;
+        let isKeyPressed = false;
+        let spaceTimer = null;
+        
+        let audioCtx = null;
+        let currentOsc = null;
+        let currentGain = null;
+
+        // モード切替
+        function switchMode() {
+            currentMode = document.querySelector('input[name="mode"]:checked').value;
+            document.getElementById('txSection').classList.toggle('active', currentMode === 'tx');
+            document.getElementById('rxSection').classList.toggle('active', currentMode === 'rx');
+            nextQuestion();
+        }
+
+        // 単語をモールスに変換（スペース区切り）
+        function getMorseString(word) {
+            return word.split('').map(char => morseDict[char]).join(' ');
+        }
+
+        // 次の問題をセット（ランダム）
+        function nextQuestion() {
+            const randomIndex = Math.floor(Math.random() * wordList.length);
+            currentQ = wordList[randomIndex];
+            currentTargetMorseSpace = getMorseString(currentQ.word);
+
+            document.getElementById('targetMeaning').innerText = currentQ.meaning;
+            
+            if (currentMode === 'tx') {
+                document.getElementById('txTargetWord').innerText = currentQ.word;
+                document.getElementById('txTargetMorse').innerText = currentTargetMorseSpace;
+                resetInput();
+            } else {
+                document.getElementById('rxTargetMorse').innerText = currentTargetMorseSpace;
+                document.getElementById('rxInput').value = '';
+                document.getElementById('rxInput').focus();
+            }
+            document.getElementById('resultMsg').innerText = '';
+        }
+
+        // 入力をリセット（TXモード用）
+        function resetInput() {
+            userInputMorse = '';
+            document.getElementById('userMorse').innerText = 'start';
+            document.getElementById('resultMsg').innerText = '';
+        }
+
+        // --- 🔊 音声処理 ---
+        function startTone() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (currentOsc) return;
+            currentOsc = audioCtx.createOscillator();
+            currentGain = audioCtx.createGain();
+            currentOsc.type = 'sine';
+            currentOsc.frequency.setValueAtTime(600, audioCtx.currentTime);
+            currentGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            currentGain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.005);
+            currentOsc.connect(currentGain);
+            currentGain.connect(audioCtx.destination);
+            currentOsc.start();
+        }
+
+        function stopTone() {
+            if (currentOsc && currentGain && audioCtx) {
+                currentGain.gain.setValueAtTime(currentGain.gain.value, audioCtx.currentTime);
+                currentGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.005);
+                setTimeout(() => {
+                    if (currentOsc) {
+                        currentOsc.stop(); currentOsc.disconnect();
+                        currentOsc = null; currentGain = null;
+                    }
+                }, 10);
+            }
+        }
+
+        // --- ⌨️ 発振（TX）モードのキーボードイベント ---
+        window.addEventListener('keydown', (e) => {
+            if (currentMode !== 'tx') return; // 解読モード時は無効
+            if (e.code === 'Space' && !e.repeat) {
+                e.preventDefault();
+                isKeyPressed = true;
+                keyDownTime = Date.now();
+                clearTimeout(spaceTimer); // 打鍵中はスペース挿入タイマーをキャンセル
+                startTone();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (currentMode !== 'tx') return;
+            if (e.code === 'Space' && isKeyPressed) {
+                e.preventDefault();
+                isKeyPressed = false;
+                stopTone();
+
+                const duration = Date.now() - keyDownTime;
+                
+                // 【変更点】150ms未満は「・」、150ms以上は「－」
+                userInputMorse += (duration < THRESHOLD_MS) ? '・' : '－';
+                document.getElementById('userMorse').innerText = userInputMorse;
+
+                // 400ms入力がなければ「文字の区切り」としてスペースを入れる
+                spaceTimer = setTimeout(() => {
+                    if(userInputMorse.length > 0 && !userInputMorse.endsWith(' ')) {
+                        userInputMorse += ' ';
+                        document.getElementById('userMorse').innerText = userInputMorse;
+                    }
+                    checkTx(); // 判定処理
+                }, 400);
+            }
+        });
+
+        // 発振モードの判定（スペースを除外して純粋に打鍵順序が合っているか確認）
+        function checkTx() {
+            const cleanInput = userInputMorse.replace(/\s/g, '');
+            const cleanTarget = currentTargetMorseSpace.replace(/\s/g, '');
+
+            if (cleanInput.length >= cleanTarget.length) {
+                if (cleanInput === cleanTarget) {
+                    success();
+                } else {
+                    document.getElementById('resultMsg').style.color = '#dc3545';
+                    document.getElementById('resultMsg').innerText = '❌ ミスがあります。やり直そう！';
+                    setTimeout(resetInput, 1500);
+                }
+            }
+        }
+
+        // 解読（RX）モードの判定
+        function checkRx() {
+            const inputVal = document.getElementById('rxInput').value.trim().toUpperCase();
+            if (inputVal === currentQ.word) {
+                success();
+            } else {
+                document.getElementById('resultMsg').style.color = '#dc3545';
+                document.getElementById('resultMsg').innerText = '❌ ちがうよ！もう一度考えてみよう。';
+            }
+        }
+
+        // 正解時の処理
+        function success() {
+            document.getElementById('resultMsg').style.color = '#28a745';
+            document.getElementById('resultMsg').innerText = '⭕ お見事！正解です！';
+            score++;
+            document.getElementById('score').innerText = score;
+            setTimeout(nextQuestion, 1000);
+        }
+
+        // 初期化
+        nextQuestion();
+    </script>
+</body>
+</html>
