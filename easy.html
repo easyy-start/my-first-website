@@ -250,8 +250,8 @@
                 // 押していた時間を計算
                 const duration = Date.now() - keyDownTime;
                 
-                // 200ms未満は「・」、200ms以上は「－」
-                if (duration < 200) {
+                // 150ms未満は「・」、150ms以上は「－」
+                if (duration < 150) {
                     userInputMorse += '・';
                 } else {
                     userInputMorse += '－';
