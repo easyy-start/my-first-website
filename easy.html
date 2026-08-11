@@ -99,6 +99,29 @@
             color: #2b3a4a;
             text-decoration: none;
         }
+        .morse-btn {
+            width: 100%;
+            height: 100px; /* 押しやすいように大きく */
+            background-color: #28a745;
+            color: white;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px #1e7e34;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            margin-top: 10px;
+        }
+        
+        /* 押している間、ボタンが沈む演出 */
+        .morse-btn:active, .morse-btn.active {
+            transform: translateY(3px);
+            box-shadow: 0 1px #1e7e34;
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
@@ -125,6 +148,11 @@
 
             <!-- 自分が打ったモールス信号 -->
             <div class="input-display" id="userMorse">(ここに表示）</div> 
+            
+            <!-- タップ用ボタン -->
+            <button class="morse-btn" id="morseBtn">
+                📻 ここを押す（スペースキーも可）
+            </button>
 
             <button class="btn-reset" onclick="clearInput()">打ち直す</button>
 
@@ -232,36 +260,47 @@
         }
 
         // --- ⌨️ スペースキー入力イベント ---
+        // 押した時の共通処理
+        function handlePressStart(e) {
+            if (e) e.preventDefault();
+            if (isKeyPressed) return;
+            isKeyPressed = true;
+            keyDownTime = Date.now();
+            startTone();
+            document.getElementById('morseBtn').classList.add('active');
+        }
+        
+        // 離した時の共通処理
+        function handlePressEnd(e) {
+            if (e) e.preventDefault();
+            if (!isKeyPressed) return;
+            isKeyPressed = false;
+            stopTone();
+            document.getElementById('morseBtn').classList.remove('active');
+        
+            const duration = Date.now() - keyDownTime;
+            if (duration < 200) {
+                userInputMorse += '・';
+            } else {
+                userInputMorse += '－';
+            }
+            document.getElementById('userMorse').innerText = userInputMorse;
+            checkMorse();
+        }
+        
+        // --- 📱 スマホ（タッチ/マウス）のイベント ---
+        const btn = document.getElementById('morseBtn');
+        btn.addEventListener('pointerdown', handlePressStart);
+        btn.addEventListener('pointerup', handlePressEnd);
+        btn.addEventListener('pointerleave', handlePressEnd); // ボタン外に指が外れた時
+        
+        // --- ⌨️ PC（スペースキー）のイベント ---
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !e.repeat) {
-                e.preventDefault(); // 画面スクロール防止
-                isKeyPressed = true;
-                keyDownTime = Date.now();
-                startTone(); // 音を鳴らし始める
-            }
+            if (e.code === 'Space' && !e.repeat) handlePressStart(e);
         });
-
         window.addEventListener('keyup', (e) => {
-            if (e.code === 'Space' && isKeyPressed) {
-                e.preventDefault();
-                isKeyPressed = false;
-                stopTone(); // 音を止める
-
-                // 押していた時間を計算
-                const duration = Date.now() - keyDownTime;
-                
-                // 150ms未満は「・」、150ms以上は「－」
-                if (duration < 150) {
-                    userInputMorse += '・';
-                } else {
-                    userInputMorse += '－';
-                }
-
-                document.getElementById('userMorse').innerText = userInputMorse;
-                checkMorse();
-            }
+            if (e.code === 'Space') handlePressEnd(e);
         });
-
         // 判定処理
         function checkMorse() {
             // 長さが一致したタイミングで判定
